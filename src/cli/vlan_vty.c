@@ -1074,7 +1074,10 @@ DEFUN(cli_intf_vlan_trunk_allowed,
     const struct ovsrec_port *vlan_port_row = NULL;
     const struct ovsrec_interface *intf_row = NULL;
     const struct ovsrec_vlan *vlan_row = NULL;
+    const struct ovsrec_system *const_row = NULL;
     struct ovsdb_idl_txn *status_txn = cli_do_config_start();
+    const char *max_vlan=NULL;
+    const char *min_vlan=NULL;
     enum ovsdb_idl_txn_status status;
     int vlan_id = atoi((char *) argv[0]);
     int i = 0, found_vlan = 0;
@@ -1088,6 +1091,30 @@ DEFUN(cli_intf_vlan_trunk_allowed,
     }
 
     char *ifname = (char *) vty->index;
+    const_row = ovsrec_system_first(idl);
+
+    if (!const_row) {
+        VLOG_ERR("[%s:%d]: Failed to retrieve a row from System table\n",
+                    __FUNCTION__, __LINE__);
+        cli_do_config_abort(status_txn);
+        return CMD_OVSDB_FAILURE;
+    }
+
+    min_vlan = smap_get(&const_row->other_config,
+                    SYSTEM_OTHER_CONFIG_MAP_MIN_INTERNAL_VLAN);
+
+    max_vlan = smap_get(&const_row->other_config,
+                    SYSTEM_OTHER_CONFIG_MAP_MAX_INTERNAL_VLAN);
+
+    if ((min_vlan != NULL) && (max_vlan != NULL) &&
+        (vlan_id >= atoi(min_vlan)) &&
+        (vlan_id <= atoi(max_vlan)))
+    {
+       vty_out(vty, "Unable to set VLAN. VLAN %s is part of internal VLAN.%s",
+                    argv[0], VTY_NEWLINE);
+       cli_do_config_abort(status_txn);
+       return CMD_SUCCESS;
+    }
 
     OVSREC_INTERFACE_FOR_EACH(intf_row, idl)
     {
