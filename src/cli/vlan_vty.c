@@ -1089,6 +1089,21 @@ DEFUN(cli_intf_vlan_trunk_allowed,
 
     char *ifname = (char *) vty->index;
 
+    OVSREC_PORT_FOR_EACH(port_row, idl)
+    {
+       port_vlan_str = smap_get(&port_row->hw_config,
+                                PORT_HW_CONFIG_MAP_INTERNAL_VLAN_ID);
+
+       if ((port_vlan_str != NULL) &&
+          (strcmp(port_vlan_str, argv[0]) == 0))
+       {
+          vty_out(vty, "Internal VLAN %d is assigned to interface %s.%s",
+                       vlan_id, port_row->name, VTY_NEWLINE);
+          cli_do_config_abort(status_txn);
+          return CMD_SUCCESS;
+       }
+    }
+
     OVSREC_INTERFACE_FOR_EACH(intf_row, idl)
     {
         if (strcmp(intf_row->name, ifname) == 0)
