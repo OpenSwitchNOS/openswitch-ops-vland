@@ -157,6 +157,7 @@ vland_debug_dump(struct ds *ds)
 static void
 construct_vlan_bitmap(const struct ovsrec_port *row, struct port_data *port)
 {
+    const char *port_vlan_str = NULL;
     int native_vid = -1;
     bool trunk_all_vlans = false;
     unsigned long *vbmp = NULL;
@@ -223,7 +224,10 @@ construct_vlan_bitmap(const struct ovsrec_port *row, struct port_data *port)
     port->vlan_mode = vlan_mode;
     port->native_vid = native_vid;
     port->vlans_bitmap = vbmp;
-    port->trunk_all_vlans = trunk_all_vlans;
+    port_vlan_str = smap_get(&row->hw_config,
+                   PORT_HW_CONFIG_MAP_INTERNAL_VLAN_ID);
+    if (port_vlan_str != NULL)
+       port->trunk_all_vlans = trunk_all_vlans;
 
 } /* construct_vlan_bitmap */
 
@@ -266,6 +270,13 @@ static void
 add_new_port(const struct ovsrec_port *port_row)
 {
     struct port_data *new_port = NULL;
+    const char *port_vlan_str;
+
+    port_vlan_str = smap_get(&port_row->hw_config,
+                   PORT_HW_CONFIG_MAP_INTERNAL_VLAN_ID);
+    if (port_vlan_str == NULL){
+      return;
+    }
 
     /* Allocate structure to save state information for this port. */
     new_port = xzalloc(sizeof(struct port_data));
