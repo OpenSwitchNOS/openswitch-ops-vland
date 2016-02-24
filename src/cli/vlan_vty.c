@@ -842,6 +842,7 @@ DEFUN(cli_intf_vlan_access,
     const struct ovsrec_port *port_row = NULL;
     const struct ovsrec_port *vlan_port_row = NULL;
     const struct ovsrec_interface *intf_row = NULL;
+    const struct ovsrec_interface * tmp_row = NULL;
     const struct ovsrec_vlan *vlan_row = NULL;
     struct ovsdb_idl_txn *status_txn = cli_do_config_start();
     enum ovsdb_idl_txn_status status;
@@ -854,6 +855,17 @@ DEFUN(cli_intf_vlan_access,
         cli_do_config_abort(status_txn);
         vty_out(vty, OVSDB_INTF_VLAN_ACCESS_ERROR, vlan_id, VTY_NEWLINE);
         return CMD_SUCCESS;
+    }
+
+     OVSREC_INTERFACE_FOR_EACH(tmp_row, idl)
+    {
+        if (check_internal_vlan(atoi(argv[0])) == 0)
+        {
+           vty_out(vty, "Error : Vlan ID is an internal vlan.%s",
+                   VTY_NEWLINE);
+           cli_do_config_abort(status_txn);
+           return CMD_SUCCESS;
+        }
     }
 
     char *ifname = (char *) vty->index;
