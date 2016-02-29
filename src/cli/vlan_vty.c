@@ -425,6 +425,7 @@ DEFUN(vtysh_no_vlan,
         ovsrec_bridge_set_vlans(default_bridge_row, vlans,
             default_bridge_row->n_vlans - 1);
 
+        vlan_found = 0;
         OVSREC_PORT_FOR_EACH(port_row, idl)
         {
             int64_t* trunks = NULL;
@@ -433,6 +434,7 @@ DEFUN(vtysh_no_vlan,
             {
                 if (vlan_id == port_row->trunks[i])
                 {
+                    vlan_found = 1;
                     trunks = xmalloc(sizeof *port_row->trunks * (port_row->n_trunks - 1));
                     for (i = n = 0; i < port_row->n_trunks; i++)
                     {
@@ -447,6 +449,9 @@ DEFUN(vtysh_no_vlan,
                 }
             }
             if (port_row->n_tag == 1 && *port_row->tag == vlan_row->id)
+                vlan_found = 1;
+
+            if (vlan_found)
             {
                 int64_t* tag = NULL;
                 int tag_count = 0;
@@ -1143,6 +1148,16 @@ DEFUN(cli_intf_vlan_trunk_allowed,
         return CMD_SUCCESS;
     }
 
+    /* Checking  whether vlan is used as trunk native mode. */
+    OVSREC_PORT_FOR_EACH(port_row, idl)
+    {
+     if ((port_row->tag != NULL) && (*(port_row->tag) == vlan_id )) {
+         vty_out(vty,"Failed to set !! VLAN %d used as trunk native.%s",vlan_id, VTY_NEWLINE);
+         cli_do_config_abort(status_txn);
+         return CMD_SUCCESS;
+      }
+    }
+
     char *ifname = (char *) vty->index;
     const_row = ovsrec_system_first(idl);
 
@@ -1323,8 +1338,6 @@ DEFUN(cli_intf_no_vlan_trunk_allowed,
         vty_out(vty, "Failed to remove trunk VLAN%s", VTY_NEWLINE);
         return CMD_SUCCESS;
     }
-
-
     OVSREC_INTERFACE_FOR_EACH(intf_row, idl)
     {
         if (strcmp(intf_row->name, ifname) == 0)
@@ -1470,6 +1483,18 @@ DEFUN(cli_intf_vlan_trunk_native,
         vty_out(vty, OVSDB_INTF_VLAN_TRUNK_NATIVE_ERROR,vlan_id, VTY_NEWLINE);
         return CMD_SUCCESS;
     }
+
+    /* Checking whether vlan is used as trunk allowed mode. */
+    OVSREC_PORT_FOR_EACH(port_row, idl)
+    {
+       for (i = 0; i < port_row->n_trunks; i++) {
+          if (vlan_id == port_row->trunks[i]) {
+              vty_out(vty,"Failed to set !! VLAN%d used as trunk allowed.%s",vlan_id, VTY_NEWLINE);
+              cli_do_config_abort(status_txn);
+              return CMD_SUCCESS;
+         }
+       }
+     }
 
     char *ifname = (char *) vty->index;
 
