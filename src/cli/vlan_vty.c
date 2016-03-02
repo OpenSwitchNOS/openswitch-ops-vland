@@ -2553,10 +2553,12 @@ DEFUN(cli_show_vlan,
 {
     const struct ovsrec_vlan *vlan_row = NULL;
     const struct ovsrec_port *port_row = NULL;
-    struct shash sorted_vlan_id;
-    const struct shash_node **nodes;
-    int idx, count, i;
+    const struct ovsrec_port *port_row_temp = NULL;
+    struct shash sorted_vlan_id, sorted_vlan_port;
+    const struct shash_node **nodes, **port_nodes;
+    int idx, count, i, count_port, idx_port;
     char str[15];
+    const char *port_vlan_str;
 
     vlan_row = ovsrec_vlan_first(idl);
     if (vlan_row == NULL)
@@ -2564,6 +2566,7 @@ DEFUN(cli_show_vlan,
         vty_out(vty, "No vlan is configured%s", VTY_NEWLINE);
         return CMD_SUCCESS;
     }
+
 
     vty_out(vty, "%s", VTY_NEWLINE);
     vty_out(vty, "--------------------------------------------------------------------------------------%s", VTY_NEWLINE);
@@ -2580,6 +2583,24 @@ DEFUN(cli_show_vlan,
 
     nodes = sort_vlan_id(&sorted_vlan_id);
     count = shash_count(&sorted_vlan_id);
+
+    shash_init(&sorted_vlan_port);
+    OVSREC_PORT_FOR_EACH(port_row_temp, idl)
+    {
+        port_vlan_str = smap_get(&port_row_temp->hw_config, PORT_HW_CONFIG_MAP_INTERNAL_VLAN_ID);
+        if (port_vlan_str == NULL)
+        {
+            continue;
+        }
+        else
+        {
+            shash_add(&sorted_vlan_port, port_vlan_str, (void *)port_row_temp);
+        }
+    }
+    count_port = shash_count(&sorted_vlan_port);
+    port_nodes = sort_vlan_id(&sorted_vlan_port);
+    idx_port = 0;
+
     for (idx = 0; idx < count; idx++)
     {
         vlan_row = (const struct ovsrec_vlan *)nodes[idx]->data;
@@ -2629,6 +2650,15 @@ DEFUN(cli_show_vlan,
                     {
                         vty_out(vty, ", %s", port_row->name);
                     }
+                }
+            }
+            if(!smap_is_empty(&vlan_row->internal_usage))
+            {
+                if(idx_port < count_port)
+                {
+                    port_row_temp = (const struct ovsrec_port *)port_nodes[idx_port]->data;
+                    vty_out(vty, "%s", port_row_temp->name);
+                    idx_port++;
                 }
             }
         }
