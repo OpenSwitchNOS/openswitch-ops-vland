@@ -2787,6 +2787,11 @@ DEFUN(cli_show_vlan,
             }
         }
 
+        if (smap_get(&vlan_row->internal_usage, VLAN_INTERNAL_USAGE_L3PORT) != NULL)
+        {
+            vty_out(vty, "%s", smap_get(&vlan_row->internal_usage, VLAN_INTERNAL_USAGE_L3PORT));
+        }
+
         vty_out(vty, "%s", VTY_NEWLINE);
     }
     shash_destroy(&sorted_vlan_id);
