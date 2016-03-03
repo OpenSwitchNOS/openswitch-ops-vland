@@ -52,6 +52,42 @@ class VLANCliTest(OpsVsiTest):
         assert (vlan_created is True), 'Test to create VLAN - FAILED!'
         return True
 
+    def defaultVlan(self):
+        info('''
+########## Test to default VLAN ##########
+''')
+        vlan_created = False
+        s1 = self.net.switches[0]
+        s1.cmdCLI('conf t')
+        out = s1.cmdCLI('do show running-config')
+        lines = out.split('\n')
+        for line in lines:
+            if 'vlan 1' in line:
+                vlan_created = True
+        assert (vlan_created is True), 'Test to default VLAN - FAILED!'
+
+        s1.cmdCLI('interface 10')
+        s1.cmdCLI('no shutdown')
+        s1.cmdCLI('no routing')
+        out = s1.cmdCLI('do show vlan')
+        lines = out.split('\n')
+        vlan_created = False
+        for line in lines:
+            if 'DEFAULT_VLAN_1' in line and '10' in line:
+                vlan_created = True
+        assert (vlan_created is True), 'Test to default VLAN - FAILED!'
+
+    def shutdownDefaultVlan(self):
+        info('''
+########## Test to avoid shutdown in default VLAN ##########
+''')
+        s1 = self.net.switches[0]
+        s1.cmdCLI('conf t')
+        s1.cmdCLI('vlan 1')
+        out = s1.cmdCLI('shutdown')
+        assert ("Shutdown not permitted" in out), \
+            'Test to avoid shutdown in default VLAN - FAILED!'
+
     def showVlanSummary(self):
         s1 = self.net.switches[0]
         info('''
@@ -134,6 +170,14 @@ class VLANCliTest(OpsVsiTest):
         assert (vlan_access_cmd_found is False), \
             'Test "vlan access" command - FAILED!'
 
+        out = s1.cmdCLI('do show vlan')
+        lines = out.split('\n')
+        vlan_created = False
+        for line in lines:
+            if 'DEFAULT_VLAN_1' in line and '21' in line:
+                vlan_created = True
+        assert (vlan_created is True), 'Test "vlan access" command - FAILED!'
+
         s1.cmdCLI('exit')
         s1.cmdCLI('interface lag 1')
         s1.cmdCLI('exit')
@@ -194,6 +238,15 @@ class VLANCliTest(OpsVsiTest):
         assert (vlan_trunk_allowed_cmd_found is True), \
             'Test to add VLAN to interface - FAILED!'
 
+        out = s1.cmdCLI('do show vlan')
+        lines = out.split('\n')
+        vlan_created = False
+        for line in lines:
+            if 'DEFAULT_VLAN_1' in line and '52-1' in line:
+                vlan_created = True
+        assert (vlan_created is True), \
+            'Test to add VLAN to interface - FAILED!'
+
         s1.cmdCLI('exit')
         s1.cmdCLI('interface lag 1')
         s1.cmdCLI('exit')
@@ -233,6 +286,8 @@ class VLANCliTest(OpsVsiTest):
                 success += 1
             if 'vlan trunk allowed 12' in line:
                 success += 1
+            if 'vlan trunk allowed 2' in line:
+                success += 1
 
         out = s1.cmdCLI('do show vlan')
         lines = out.split('\n')
@@ -242,17 +297,32 @@ class VLANCliTest(OpsVsiTest):
             if 'VLAN12' in line and '52-2' in line:
                 success += 1
 
-        assert success == 4, \
+        assert success == 5, \
+            'Test to add trunk native to interface - FAILED!'
+
+        out = s1.cmdCLI('no vlan trunk allowed 2')
+        assert ('Not permitted' in out), \
             'Test to add trunk native to interface - FAILED!'
 
         vlan_trunk_native_cmd_found = False
         s1.cmdCLI('no vlan trunk native')
+        s1.cmdCLI('no vlan trunk allowed 2')
+        s1.cmdCLI('no vlan trunk allowed 12')
         out = s1.cmdCLI('do show running-config')
         lines = out.split('\n')
         for line in lines:
             if 'vlan trunk native' in line:
                 vlan_trunk_native_cmd_found = True
         assert (vlan_trunk_native_cmd_found is False), \
+            'Test to add trunk native to interface - FAILED!'
+
+        out = s1.cmdCLI('do show vlan')
+        lines = out.split('\n')
+        vlan_created = False
+        for line in lines:
+            if 'DEFAULT_VLAN_1' in line and '52-2' in line:
+                vlan_created = True
+        assert (vlan_created is True), \
             'Test to add trunk native to interface - FAILED!'
 
         s1.cmdCLI('exit')
@@ -285,6 +355,10 @@ class VLANCliTest(OpsVsiTest):
             'Test add trunk native tag vlan to interface - FAILED!'
 
         s1.cmdCLI('no routing')
+        out = s1.cmdCLI('vlan trunk native tag')
+        assert 'The interface is not in native vlan mode' in out, \
+            'Test add trunk native tag vlan to interface - FAILED!'
+
         s1.cmdCLI('vlan trunk native 1789')
         s1.cmdCLI('vlan trunk allowed 88')
         s1.cmdCLI('vlan trunk native tag')
@@ -347,6 +421,7 @@ class VLANCliTest(OpsVsiTest):
             'Test to add access vlan to LAG - FAILED!'
 
         s1.cmdCLI('no routing')
+        out = s1.cmdCLI('do show running-config')
         s1.cmdCLI('vlan access 2')
         out = s1.cmdCLI('do show running-config')
         lines = out.split('\n')
@@ -371,6 +446,16 @@ class VLANCliTest(OpsVsiTest):
 
         assert (vlan_access_cmd_present is False), \
             'Test to add access vlan to LAG - FAILED!'
+
+        out = s1.cmdCLI('do show vlan')
+        lines = out.split('\n')
+        vlan_created = False
+        for line in lines:
+            if 'DEFAULT_VLAN_1' in line and 'lag21' in line:
+                vlan_created = True
+        assert (vlan_created is True), \
+            'Test to add access vlan to LAG - FAILED!'
+
         return True
 
     def addTrunkVlanToLAG(self):
@@ -412,6 +497,16 @@ class VLANCliTest(OpsVsiTest):
                 vlan_trunk_allowed_cmd_present = True
         assert (vlan_trunk_allowed_cmd_present is False), \
             'Test to add trunk vlan to LAG - FAILED!'
+
+        out = s1.cmdCLI('do show vlan')
+        lines = out.split('\n')
+        vlan_created = False
+        for line in lines:
+            if 'DEFAULT_VLAN_1' in line and 'lag21' in line:
+                vlan_created = True
+        assert (vlan_created is True), \
+            'Test to add trunk vlan to LAG - FAILED!'
+
         return True
 
     def addTrunkNativeVlanToLAG(self):
@@ -440,6 +535,8 @@ class VLANCliTest(OpsVsiTest):
                 success += 1
             if 'vlan trunk allowed 66' in line:
                 success += 1
+            if 'vlan trunk allowed 1234' in line:
+                success += 1
 
         out = s1.cmdCLI('do show vlan')
         lines = out.split('\n')
@@ -450,10 +547,22 @@ class VLANCliTest(OpsVsiTest):
                 success += 1
 
         s1.cmdCLI('no vlan trunk native')
+        s1.cmdCLI('no vlan trunk allowed 66')
+        s1.cmdCLI('no vlan trunk allowed 1234')
         out = s1.cmdCLI('do show running-config')
 
-        assert success == 4, \
+        assert success == 5, \
             'Test to add trunk native vlan to LAG - FAILED!'
+
+        out = s1.cmdCLI('do show vlan')
+        lines = out.split('\n')
+        vlan_created = False
+        for line in lines:
+            if 'DEFAULT_VLAN_1' in line and 'lag41' in line:
+                vlan_created = True
+        assert (vlan_created is True), \
+            'Test to add trunk native vlan to LAG - FAILED!'
+
         return True
 
     def addTrunkNativeTagVlanToLAG(self):
@@ -468,14 +577,17 @@ class VLANCliTest(OpsVsiTest):
         s1.cmdCLI('exit')
         s1.cmdCLI('vlan 2')
         s1.cmdCLI('exit')
-        s1.cmdCLI('interface lag 51')
+        s1.cmdCLI('interface lag 32')
         out = s1.cmdCLI('vlan trunk native tag')
         success = 0
         assert 'Disable routing on the LAG' in out, \
             'Test to add trunk native tag vlan to LAG - FAILED!'
 
         s1.cmdCLI('no routing')
+        out = s1.cmdCLI('vlan trunk native tag')
 
+        assert 'The LAG is not in native vlan mode' in out, \
+            'Test add trunk native tag vlan to LAG - FAILED!'
         s1.cmdCLI('vlan trunk native 1567')
         s1.cmdCLI('vlan trunk allowed 44')
         s1.cmdCLI('vlan trunk native tag')
@@ -483,6 +595,8 @@ class VLANCliTest(OpsVsiTest):
         lines = out.split('\n')
         for line in lines:
             if 'vlan trunk native 1567' in line:
+                success += 1
+            if 'vlan trunk allowed 1567' in line:
                 success += 1
             if 'vlan trunk allowed 44' in line:
                 success += 1
@@ -492,11 +606,11 @@ class VLANCliTest(OpsVsiTest):
         out = s1.cmdCLI('do show vlan')
         lines = out.split('\n')
         for line in lines:
-            if 'VLAN1567' in line and 'lag51' in line:
+            if 'VLAN1567' in line and 'lag32' in line:
                 success += 1
-            if 'VLAN44' in line and 'lag51' in line:
+            if 'VLAN44' in line and 'lag32' in line:
                 success += 1
-        assert success == 5, \
+        assert success == 6, \
             'Test to add trunk native tag vlan to LAG - FAILED!'
 
         vlan_trunk_native_tag_present = False
@@ -508,6 +622,19 @@ class VLANCliTest(OpsVsiTest):
                 vlan_trunk_native_tag_present = True
         assert (vlan_trunk_native_tag_present is False), \
             'Test to add trunk native tag vlan to LAG - FAILED!'
+
+        s1.cmdCLI('no vlan trunk native 1567')
+        s1.cmdCLI('no vlan trunk allowed 1567')
+        s1.cmdCLI('no vlan trunk allowed 44')
+        out = s1.cmdCLI('do show vlan')
+        lines = out.split('\n')
+        vlan_created = False
+        for line in lines:
+            if 'DEFAULT_VLAN_1' in line and 'lag41' in line:
+                vlan_created = True
+        assert (vlan_created is True), \
+            'Test to add trunk native tag vlan to LAG - FAILED!'
+
         return True
 
     def vlanCommands(self):
@@ -622,6 +749,18 @@ class Test_vlan_cli:
 ########## Test "show vlan summary" command - SUCCESS! ##########
 ''')
 
+    def test_defaultVlan(self):
+        if self.test.defaultVlan():
+            info('''
+########## Test to default VLAN - SUCCESS! ##########
+''')
+
+    def test_shutdownDefaultVlan(self):
+        if self.test.shutdownDefaultVlan():
+            info('''
+########## Test to avoid shutdown in default VLAN - SUCCESS! ##########
+''')
+
     def test_deleteVlan(self):
         if self.test.deleteVlan():
             info('''
@@ -633,7 +772,6 @@ class Test_vlan_cli:
             info('''
 ########## Test "vlan access" command - SUCCESS! ##########
 ''')
-
 
     def test_addTrunkVlanToInterface(self):
         if self.test.addTrunkVlanToInterface():
@@ -692,8 +830,8 @@ class Test_vlan_cli:
     def test_display_vlan_id_in_numerical_order(self):
         if self.test.display_vlan_id_in_numerical_order():
             info('''
-########## Test to verify that vlan id is displaying in numerical order - SUCCESS! ##########\n''')
-
+########## Test to verify that vlan id is displaying
+ in numerical order - SUCCESS! ##########\n''')
 
     def test_noVlanTrunkAllowed(self):
         if self.test.noVlanTrunkAllowed():
