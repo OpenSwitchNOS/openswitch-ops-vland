@@ -1189,6 +1189,7 @@ DEFUN(cli_intf_vlan_trunk_allowed,
     const struct ovsrec_port *vlan_port_row = NULL;
     const struct ovsrec_interface *intf_row = NULL;
     const struct ovsrec_vlan *vlan_row = NULL;
+     const struct ovsrec_interface * tmp_row = NULL;
     struct range_list *temp_to_free, *temp_to_display, *list = NULL;
     struct ovsdb_idl_txn *status_txn = NULL;
     const struct ovsrec_system *const_row = NULL;
@@ -1208,6 +1209,16 @@ DEFUN(cli_intf_vlan_trunk_allowed,
     temp_to_display = temp_to_free = list;
     status_txn = cli_do_config_start();
     const_row = ovsrec_system_first(idl);
+
+    /* Check for internal vlan use. */
+    OVSREC_INTERFACE_FOR_EACH(tmp_row, idl) {
+        if (check_internal_vlan(atoi(argv[0])) == 0)
+        {
+            vty_out(vty, "Error : Vlan ID is an internal vlan.%s", VTY_NEWLINE);
+            cli_do_config_abort(status_txn);
+            return CMD_SUCCESS;
+        }
+    }
 
     if (!const_row) {
         VLOG_ERR("[%s:%d]: Failed to retrieve a row from System table\n",
@@ -1558,6 +1569,7 @@ DEFUN(cli_intf_vlan_trunk_native,
     const struct ovsrec_port *port_row = NULL;
     const struct ovsrec_port *vlan_port_row = NULL;
     const struct ovsrec_interface *intf_row = NULL;
+     const struct ovsrec_interface * tmp_row = NULL;
     const struct ovsrec_vlan *vlan_row = NULL;
     struct ovsdb_idl_txn *status_txn = cli_do_config_start();
     enum ovsdb_idl_txn_status status;
@@ -1570,6 +1582,16 @@ DEFUN(cli_intf_vlan_trunk_native,
         cli_do_config_abort(status_txn);
         vty_out(vty, OVSDB_INTF_VLAN_TRUNK_NATIVE_ERROR,vlan_id, VTY_NEWLINE);
         return CMD_SUCCESS;
+    }
+
+     /* Check for internal vlan use. */
+    OVSREC_INTERFACE_FOR_EACH(tmp_row, idl) {
+        if (check_internal_vlan(atoi(argv[0])) == 0)
+        {
+            vty_out(vty, "Error : Vlan ID is an internal vlan.%s", VTY_NEWLINE);
+            cli_do_config_abort(status_txn);
+            return CMD_SUCCESS;
+        }
     }
 
     char *ifname = (char *) vty->index;
@@ -2722,7 +2744,7 @@ DEFUN(cli_show_vlan,
 
     vty_out(vty, "%s", VTY_NEWLINE);
     vty_out(vty, "--------------------------------------------------------------------------------------%s", VTY_NEWLINE);
-    vty_out(vty, "VLAN    Name            Status   Reason         Reserved       Ports%s", VTY_NEWLINE);
+    vty_out(vty, "VLAN    Name            Status   Reason         Reserved       Interfaces%s", VTY_NEWLINE);
     vty_out(vty, "--------------------------------------------------------------------------------------%s", VTY_NEWLINE);
 
     shash_init(&sorted_vlan_id);
@@ -2838,7 +2860,7 @@ DEFUN(cli_show_vlan_id,
 
     vty_out(vty, "%s", VTY_NEWLINE);
     vty_out(vty, "--------------------------------------------------------------------------------------%s", VTY_NEWLINE);
-    vty_out(vty, "VLAN    Name            Status   Reason         Reserved       Ports%s", VTY_NEWLINE);
+    vty_out(vty, "VLAN    Name            Status   Reason         Reserved       Interfaces%s", VTY_NEWLINE);
     vty_out(vty, "--------------------------------------------------------------------------------------%s", VTY_NEWLINE);
 
 
