@@ -319,6 +319,8 @@ update_port_cache(void)
     struct shash sh_idl_ports;
     const struct ovsrec_port *row;
     struct shash_node *sh_node, *sh_next;
+    const struct ovsrec_vlan *vlanrow;
+    unsigned long *modified_vlans;
     int rc = 0;
 
     /* Collect all the ports in the DB. */
@@ -358,7 +360,6 @@ update_port_cache(void)
         if (OVSREC_IDL_IS_ROW_INSERTED(row, idl_seqno) ||
             OVSREC_IDL_IS_ROW_MODIFIED(row, idl_seqno)) {
             struct port_data *port = sh_node->data;
-            unsigned long *modified_vlans;
             int vid;
 
             VLOG_DBG("Received updates for port %s", row->name);
@@ -378,10 +379,12 @@ update_port_cache(void)
             bitmap_or(modified_vlans, port->vlans_bitmap, VLAN_BITMAP_SIZE);
             BITMAP_FOR_EACH_1(vid, VLAN_BITMAP_SIZE, modified_vlans) {
                 struct vlan_data *vlan = vlan_lookup_by_vid(vid);
-                if (vlan) {
-                    update_vlan_membership(vlan);
-                    if (handle_vlan_config(vlan->idl_cfg, vlan)) {
-                        rc++;
+                OVSREC_VLAN_FOR_EACH(vlanrow, idl) {
+                    if ((row->name != NULL) && strcmp(vlanrow->name, vlan->name) == 0) {
+                        update_vlan_membership(vlan);
+                        if (handle_vlan_config(vlan->idl_cfg, vlan)) {
+                            rc++;
+                        }
                     }
                 }
             }
@@ -389,7 +392,7 @@ update_port_cache(void)
             /* Done. */
             bitmap_free(modified_vlans);
         }
-    }
+     }
 
     /* Destroy the shash of the IDL ports */
     shash_destroy(&sh_idl_ports);
