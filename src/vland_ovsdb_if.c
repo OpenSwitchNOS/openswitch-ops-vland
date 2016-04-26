@@ -358,25 +358,14 @@ update_port_cache(void)
         if (OVSREC_IDL_IS_ROW_INSERTED(row, idl_seqno) ||
             OVSREC_IDL_IS_ROW_MODIFIED(row, idl_seqno)) {
             struct port_data *port = sh_node->data;
-            unsigned long *modified_vlans;
             int vid;
 
             VLOG_DBG("Received updates for port %s", row->name);
 
-            /* Save old VLAN bitmap first.  If this is a new port,
-             * go ahead and allocate a blank bitmap for use later. */
-            modified_vlans = port->vlans_bitmap;
-            if (modified_vlans == NULL) {
-                modified_vlans = bitmap_allocate(VLAN_BITMAP_SIZE);
-            }
-
             /* Update bitmap of VLANs to which this PORT belongs. */
             construct_vlan_bitmap(row, port);
 
-            /* Combine both new & old VLANs since we need to update
-             * all of their status. */
-            bitmap_or(modified_vlans, port->vlans_bitmap, VLAN_BITMAP_SIZE);
-            BITMAP_FOR_EACH_1(vid, VLAN_BITMAP_SIZE, modified_vlans) {
+            BITMAP_FOR_EACH_1(vid, VLAN_BITMAP_SIZE, port->vlans_bitmap) {
                 struct vlan_data *vlan = vlan_lookup_by_vid(vid);
                 if (vlan) {
                     update_vlan_membership(vlan);
@@ -387,7 +376,6 @@ update_port_cache(void)
             }
 
             /* Done. */
-            bitmap_free(modified_vlans);
         }
     }
 
