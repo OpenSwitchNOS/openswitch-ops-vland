@@ -358,6 +358,7 @@ update_port_cache(void)
         if (OVSREC_IDL_IS_ROW_INSERTED(row, idl_seqno) ||
             OVSREC_IDL_IS_ROW_MODIFIED(row, idl_seqno)) {
             struct port_data *port = sh_node->data;
+            const struct ovsrec_vlan *vlan_row;
             unsigned long *modified_vlans;
             int vid;
 
@@ -377,11 +378,15 @@ update_port_cache(void)
              * all of their status. */
             bitmap_or(modified_vlans, port->vlans_bitmap, VLAN_BITMAP_SIZE);
             BITMAP_FOR_EACH_1(vid, VLAN_BITMAP_SIZE, modified_vlans) {
-                struct vlan_data *vlan = vlan_lookup_by_vid(vid);
-                if (vlan) {
-                    update_vlan_membership(vlan);
-                    if (handle_vlan_config(vlan->idl_cfg, vlan)) {
-                        rc++;
+                OVSREC_VLAN_FOR_EACH(vlan_row, idl) {
+                    if(vlan_row->id == vid){
+                        struct vlan_data *vlan = vlan_lookup_by_vid(vid);
+                        if (vlan) {
+                            update_vlan_membership(vlan);
+                            if (handle_vlan_config(vlan->idl_cfg, vlan)) {
+                                rc++;
+                            }
+                        }
                     }
                 }
             }
