@@ -2816,7 +2816,10 @@ DEFUN(cli_show_vlan,
                 }
                 if (print_tag == 0 && port_row->n_tag == 1 && *port_row->tag == vlan_row->id)
                 {
-                    port_nodes[n++] = (struct ovsrec_port *)port_row;
+                    if (vlan_row->id == DEFAULT_VLAN)
+                    {
+                        port_nodes[n++] = (struct ovsrec_port *)port_row;
+                    }
                 }
             }
         }
