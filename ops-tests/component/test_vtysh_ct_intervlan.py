@@ -101,6 +101,7 @@ def test_intervlan_cli(topology, step):
     ret = sw1('do show vrf')
     assert "vlan1" in ret, 'Failed to add vlan interface'
 
+    sw1('vlan 2')
     sw1('interface vlan 2')
     # Verify interface name
     list_cmd = sw1('get interface vlan2 name', shell='vsctl').strip()
@@ -160,6 +161,7 @@ def test_intervlan_cli(topology, step):
     # Checking multiple interfaces add and delete
     sw1('interface vlan 1')
     sw1('interface vlan 2')
+    sw1('vlan 3')
     sw1('interface vlan 3')
     sw1('no interface vlan 2')
     ret = sw1('do show vrf')
