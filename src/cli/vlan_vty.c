@@ -179,6 +179,29 @@ DEFUN (vtysh_interface_vlan,
 {
    vty->node = VLAN_INTERFACE_NODE;
    static char vlan_if[MAX_IFNAME_LENGTH];
+   const struct ovsrec_vlan *vlan_row = NULL;
+   bool vlan_found = false;
+   int vlan_id = atoi(argv[0]);
+
+   vlan_row = ovsrec_vlan_first(idl);
+   if (vlan_row != NULL)
+   {
+       OVSREC_VLAN_FOR_EACH(vlan_row, idl)
+       {
+           if (vlan_row->id == vlan_id)
+           {
+               vlan_found = true;
+               break;
+           }
+       }
+   }
+
+  if (!vlan_found) {
+      vty_out(vty, "VLAN%d should be created before creating "
+                    "interface VLAN%d.%s",vlan_id, vlan_id, VTY_NEWLINE);
+      vty->node = CONFIG_NODE;
+      return CMD_ERR_NOTHING_TODO;
+  }
 
    VLANIF_NAME(vlan_if, argv[0]);
 
@@ -371,6 +394,7 @@ DEFUN(vtysh_no_vlan,
     struct ovsrec_vlan **vlans = NULL;
     int i = 0, n = 0;
     int vlan_id = atoi(argv[0]);
+    static char vlan_if[MAX_IFNAME_LENGTH];
 
     vlan_row = ovsrec_vlan_first(idl);
     if (vlan_row != NULL)
@@ -396,6 +420,18 @@ DEFUN(vtysh_no_vlan,
             return CMD_SUCCESS;
         }
 
+        VLANIF_NAME(vlan_if, argv[0]);
+
+        if (!vtysh_ovsdb_port_match(vlan_if))
+        {
+            /* Check for inteface VLAN.
+             * L2 VLAN deletion is allowed if interface VLAN exists */
+            vty_out(vty, "VLAN%ld is used as an interface VLAN. "
+                    "Deletion not allowed.%s", vlan_row->id, VTY_NEWLINE);
+            vty->node = CONFIG_NODE;
+            return CMD_ERR_NOTHING_TODO;
+
+        }
         status_txn = cli_do_config_start();
 
         if (status_txn == NULL)
