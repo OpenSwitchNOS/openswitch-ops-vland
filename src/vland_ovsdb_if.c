@@ -554,10 +554,9 @@ update_vlan_membership(struct vlan_data *vlan_ptr)
         } else if (bitmap_is_set(port->vlans_bitmap, vlan_ptr->vid)) {
             found = true;
             /* Do not exit here.  We need to update all other
-             * ports that may be implicitly trunking all VLANs. */
+                 * ports that may be implicitly trunking all VLANs. */
         }
     }
-
     vlan_ptr->any_member_exists = found;
 
 } /* update_vlan_membership */
@@ -771,7 +770,6 @@ update_vlan_cache(void)
             del_old_vlan(sh_node);
         }
     }
-
     /* Add new VLANs. */
     SHASH_FOR_EACH(sh_node, &sh_idl_vlans) {
         new_vlan = shash_find_data(&all_vlans, sh_node->name);
