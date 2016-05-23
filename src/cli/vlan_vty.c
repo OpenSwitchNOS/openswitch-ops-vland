@@ -84,7 +84,8 @@ sort_vlan_id(const struct shash *sh)
         nodes = xmalloc(n * sizeof *nodes);
         i = 0;
         SHASH_FOR_EACH (node, sh) {
-            nodes[i++] = node;
+            if(node != NULL)
+                nodes[i++] = node;
         }
         ovs_assert(i == n);
 
@@ -459,6 +460,7 @@ DEFUN(vtysh_no_vlan,
                     }
                     trunk_count = port_row->n_trunks - 1;
                     ovsrec_port_set_trunks(port_row, trunks, trunk_count);
+                    free(trunks);
                     break;
                 }
             }
@@ -2148,6 +2150,13 @@ DEFUN(cli_lag_no_vlan_access,
         }
     }
 
+    if(vlan_port_row == NULL)
+    {
+        vty_out(vty, "Failed to find port entry.%s", VTY_NEWLINE);
+        cli_do_config_abort(status_txn);
+        return CMD_SUCCESS;
+    }
+
     if (vlan_port_row->vlan_mode != NULL &&
         strcmp(vlan_port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_ACCESS) != 0)
     {
@@ -2341,6 +2350,13 @@ DEFUN(cli_lag_no_vlan_trunk_allowed,
         }
     }
 
+    if(vlan_port_row == NULL)
+    {
+        vty_out(vty, "Failed to find port entry.%s", VTY_NEWLINE);
+        cli_do_config_abort(status_txn);
+        return CMD_SUCCESS;
+    }
+
     if (vlan_port_row->vlan_mode != NULL &&
         strcmp(vlan_port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_TRUNK) != 0 &&
         strcmp(vlan_port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_NATIVE_TAGGED) != 0 &&
@@ -2465,6 +2481,13 @@ DEFUN(cli_lag_vlan_trunk_native,
             vlan_port_row = port_row;
             break;
         }
+    }
+
+    if(vlan_port_row == NULL)
+    {
+        vty_out(vty, "Failed to find port entry.%s", VTY_NEWLINE);
+        cli_do_config_abort(status_txn);
+        return CMD_SUCCESS;
     }
 
     if (vlan_port_row->vlan_mode == NULL)
@@ -2614,6 +2637,13 @@ DEFUN(cli_lag_vlan_trunk_native_tag,
         }
     }
 
+    if(vlan_port_row == NULL)
+    {
+        vty_out(vty, "Failed to find port entry.%s", VTY_NEWLINE);
+        cli_do_config_abort(status_txn);
+        return CMD_SUCCESS;
+    }
+
     if (vlan_port_row->vlan_mode != NULL &&
         strcmp(vlan_port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_ACCESS) == 0)
     {
@@ -2740,7 +2770,8 @@ DEFUN(cli_show_vlan,
     const struct shash_node **ports;
     int idx, count, i;
     int port_count = 0;
-    char str[15];
+    char *str;
+    str = xmalloc(sizeof(char) * sizeof(long int));
     const char *l3_port;
 
     vlan_row = ovsrec_vlan_first(idl);
@@ -2843,6 +2874,7 @@ DEFUN(cli_show_vlan,
     }
     shash_destroy(&sorted_vlan_id);
     free(nodes);
+    free(str);
 
     return CMD_SUCCESS;
 }
