@@ -135,7 +135,7 @@ vtysh_ovsdb_intftable_parse_vlan(const char *if_name,
     if(port_row->n_tag == 1)
     {
       vtysh_ovsdb_cli_print(p_msg, "%4s%s%d", "", "vlan access ",
-                            *port_row->tag);
+                            ops_port_get_tag(port_row));
     }
   }
   else if (strcmp(port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_TRUNK) == 0)
@@ -143,7 +143,7 @@ vtysh_ovsdb_intftable_parse_vlan(const char *if_name,
     for (i = 0; i < port_row->n_trunks; i++)
     {
       vtysh_ovsdb_cli_print(p_msg, "%4s%s%d", "", "vlan trunk allowed ",
-                            port_row->trunks[i]);
+                            ops_port_get_trunks(port_row, i));
     }
   }
   else if (strcmp(port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_NATIVE_UNTAGGED)
@@ -152,12 +152,12 @@ vtysh_ovsdb_intftable_parse_vlan(const char *if_name,
     if (port_row->n_tag == 1)
     {
       vtysh_ovsdb_cli_print(p_msg, "%4s%s%d", "", "vlan trunk native ",
-                            *port_row->tag);
+                            ops_port_get_tag(port_row));
     }
     for (i = 0; i < port_row->n_trunks; i++)
     {
       vtysh_ovsdb_cli_print(p_msg, "%4s%s%d", "", "vlan trunk allowed ",
-                            port_row->trunks[i]);
+                            ops_port_get_trunks(port_row, i));
     }
   }
   else if (strcmp(port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_NATIVE_TAGGED)
@@ -166,13 +166,13 @@ vtysh_ovsdb_intftable_parse_vlan(const char *if_name,
     if (port_row->n_tag == 1)
     {
       vtysh_ovsdb_cli_print(p_msg, "%4s%s%d", "", "vlan trunk native ",
-                            *port_row->tag);
+                            ops_port_get_tag(port_row));
     }
     vtysh_ovsdb_cli_print(p_msg, "%4s%s", "", "vlan trunk native tag");
     for (i = 0; i < port_row->n_trunks; i++)
     {
       vtysh_ovsdb_cli_print(p_msg, "%4s%s%d", "", "vlan trunk allowed ",
-                            port_row->trunks[i]);
+                            ops_port_get_trunks(port_row, i));
     }
   }
 
