@@ -53,8 +53,10 @@ vtysh_vlan_context_init(void *p_private)
 
    OVSREC_VLAN_FOR_EACH(vlan_row, p_msg->idl)
    {
-       sprintf(vlan_id_str, "%ld", vlan_row->id);
-       shash_add(&sorted_vlan_id, vlan_id_str, (void *)vlan_row);
+       if (vlan_row !=  NULL) {
+           sprintf(vlan_id_str, "%ld", vlan_row->id);
+           shash_add(&sorted_vlan_id, vlan_id_str, (void *)vlan_row);
+       }
    }
 
    nodes = sort_vlan_id(&sorted_vlan_id);
