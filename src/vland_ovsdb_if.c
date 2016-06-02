@@ -37,6 +37,7 @@
 #include <shash.h>
 #include <bitmap.h>
 #include <vlan-bitmap.h>
+#include "ops-utils.h"
 
 VLOG_DEFINE_THIS_MODULE(vland_ovsdb_if);
 
@@ -194,7 +195,7 @@ construct_vlan_bitmap(const struct ovsrec_port *row, struct port_data *port)
 
     /* Get native VID from 'tag' column.  Ignore if TRUNK mode. */
     if ((row->tag != NULL) && (vlan_mode != PORT_VLAN_MODE_TRUNK)) {
-        native_vid = (int)*row->tag;
+        native_vid = (int)ops_port_get_tag(row);
     }
 
     /* Get VLAN membership next. */
@@ -853,6 +854,8 @@ vland_ovsdb_init(const char *db_path)
     ovsdb_idl_add_column(idl, &ovsrec_port_col_vlan_mode);
     ovsdb_idl_add_column(idl, &ovsrec_port_col_tag);
     ovsdb_idl_add_column(idl, &ovsrec_port_col_trunks);
+    ovsdb_idl_add_column(idl, &ovsrec_port_col_vlan_tag);
+    ovsdb_idl_add_column(idl, &ovsrec_port_col_vlan_trunks);
 
     ovsdb_idl_add_table(idl, &ovsrec_table_vlan);
     ovsdb_idl_add_column(idl, &ovsrec_vlan_col_internal_usage);
