@@ -1810,12 +1810,14 @@ DEFUN(cli_intf_no_vlan_trunk_native,
 
     if (status == TXN_SUCCESS || status == TXN_UNCHANGED)
     {
+        free(tag);
         return CMD_SUCCESS;
     }
     else
     {
         VLOG_DBG("Transaction failed to remove native VLAN. Function:%s, Line:%d", __func__, __LINE__);
         vty_out(vty, OVSDB_INTF_VLAN_REMOVE_TRUNK_NATIVE_ERROR, VTY_NEWLINE);
+        free(tag);
         return CMD_SUCCESS;
     }
     free(tag);
@@ -2377,6 +2379,7 @@ DEFUN(cli_lag_no_vlan_trunk_allowed,
             }
             trunk_count = vlan_port_row->n_trunks - 1;
             ovsrec_port_set_trunks(vlan_port_row, trunks, trunk_count);
+            free(trunks);
             break;
         }
     }
@@ -2582,12 +2585,14 @@ DEFUN(cli_lag_no_vlan_trunk_native,
 
     if (status == TXN_SUCCESS || status == TXN_UNCHANGED)
     {
+        free(tag);
         return CMD_SUCCESS;
     }
     else
     {
         VLOG_DBG("Transaction failed to remove native VLAN. Function:%s, Line:%d", __func__, __LINE__);
         vty_out(vty, OVSDB_INTF_VLAN_REMOVE_TRUNK_NATIVE_ERROR, VTY_NEWLINE);
+        free(tag);
         return CMD_SUCCESS;
     }
     free(tag);
@@ -2701,7 +2706,7 @@ DEFUN(cli_lag_no_vlan_trunk_native_tag,
         }
     }
 
-    if (vlan_port_row->vlan_mode != NULL &&
+    if (vlan_port_row != NULL && vlan_port_row->vlan_mode != NULL &&
         strcmp(vlan_port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_NATIVE_TAGGED) != 0)
     {
         vty_out(vty, "The LAG is not in native-tagged mode.%s", VTY_NEWLINE);
@@ -2772,6 +2777,7 @@ DEFUN(cli_show_vlan,
     if (vlan_row == NULL)
     {
         vty_out(vty, "No vlan is configured%s", VTY_NEWLINE);
+        free(str);
         return CMD_SUCCESS;
     }
 
