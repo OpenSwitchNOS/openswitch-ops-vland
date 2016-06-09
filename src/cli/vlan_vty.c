@@ -1833,6 +1833,7 @@ DEFUN(cli_intf_no_vlan_trunk_native,
         ovsrec_port_set_trunks(vlan_port_row, trunks, trunk_count);
     }
     status = cli_do_config_finish(status_txn);
+    free(tag);
 
     if (status == TXN_SUCCESS || status == TXN_UNCHANGED)
     {
@@ -1844,7 +1845,6 @@ DEFUN(cli_intf_no_vlan_trunk_native,
         vty_out(vty, OVSDB_INTF_VLAN_REMOVE_TRUNK_NATIVE_ERROR, VTY_NEWLINE);
         return CMD_SUCCESS;
     }
-    free(tag);
 }
 
 DEFUN(cli_intf_vlan_trunk_native_tag,
@@ -2403,6 +2403,7 @@ DEFUN(cli_lag_no_vlan_trunk_allowed,
             }
             trunk_count = vlan_port_row->n_trunks - 1;
             ovsrec_port_set_trunks(vlan_port_row, trunks, trunk_count);
+            free(trunks);
             break;
         }
     }
@@ -2605,6 +2606,7 @@ DEFUN(cli_lag_no_vlan_trunk_native,
         ovsrec_port_set_trunks(vlan_port_row, trunks, trunk_count);
     }
     status = cli_do_config_finish(status_txn);
+    free(tag);
 
     if (status == TXN_SUCCESS || status == TXN_UNCHANGED)
     {
@@ -2616,7 +2618,6 @@ DEFUN(cli_lag_no_vlan_trunk_native,
         vty_out(vty, OVSDB_INTF_VLAN_REMOVE_TRUNK_NATIVE_ERROR, VTY_NEWLINE);
         return CMD_SUCCESS;
     }
-    free(tag);
 }
 
 DEFUN(cli_lag_vlan_trunk_native_tag,
@@ -2727,6 +2728,13 @@ DEFUN(cli_lag_no_vlan_trunk_native_tag,
         }
     }
 
+    if (vlan_port_row == NULL)
+    {
+        vty_out(vty, "Failed to find port entry.%s", VTY_NEWLINE);
+        cli_do_config_abort(status_txn);
+        return CMD_SUCCESS;
+    }
+
     if (vlan_port_row->vlan_mode != NULL &&
         strcmp(vlan_port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_NATIVE_TAGGED) != 0)
     {
@@ -2792,12 +2800,13 @@ DEFUN(cli_show_vlan,
     int port_count = 0;
     char *str;
     str = xmalloc(sizeof(char) * sizeof(long int));
-    const char *l3_port;
+    const char *l3_port = NULL;
 
     vlan_row = ovsrec_vlan_first(idl);
     if (vlan_row == NULL)
     {
         vty_out(vty, "No vlan is configured%s", VTY_NEWLINE);
+        free(str);
         return CMD_SUCCESS;
     }
 
@@ -2913,7 +2922,7 @@ DEFUN(cli_show_vlan_id,
     const struct ovsrec_port *port_row = NULL;
     int vlan_id = atoi((char*) argv[0]);
     int i = 0;
-    const char *l3_port;
+    const char *l3_port = NULL;
 
     vlan_row = ovsrec_vlan_first(idl);
     if (vlan_row == NULL)
