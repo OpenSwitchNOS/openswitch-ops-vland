@@ -23,6 +23,6 @@ class VlanValidator(BaseValidator):
             vlan_id_list = []
             for ovs_rec in idl.tables["VLAN"].rows.itervalues():
                 vlan_id_list.append(ovs_rec.id)
-            if (len(vlan_id_list) != len(set(vlan_id_list))):
+            if (len(vlan_id_list) != len(set(vlan_id_list)) && vlan_id != 1):
                 details = "VLAN id %d already exists" % (vlan_id)
                 raise ValidationError(error.VERIFICATION_FAILED, details)
