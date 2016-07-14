@@ -208,7 +208,7 @@ construct_vlan_bitmap(const struct ovsrec_port *row, struct port_data *port)
         /* 'vlan_mode' column is not specified.  Follow default rules:
          *   - If 'tag' contains a value, the port is an access port.
          *   - Otherwise, the port is a trunk port. */
-        if (row->vlan_tag != NULL) {
+        if (row->tag != NULL) {
             vlan_mode = PORT_VLAN_MODE_ACCESS;
         } else {
             vlan_mode = PORT_VLAN_MODE_TRUNK;
@@ -216,22 +216,22 @@ construct_vlan_bitmap(const struct ovsrec_port *row, struct port_data *port)
     }
 
     /* Get native VID from 'tag' column.  Ignore if TRUNK mode. */
-    if ((row->vlan_tag != NULL) && (vlan_mode != PORT_VLAN_MODE_TRUNK)) {
+    if ((row->tag != NULL) && (vlan_mode != PORT_VLAN_MODE_TRUNK)) {
         native_vid = (int)ops_port_get_tag(row);
     }
 
     /* Get VLAN membership next. */
-    if ((row->n_vlan_trunks > 0) && (vlan_mode != PORT_VLAN_MODE_ACCESS)) {
+    if ((row->n_trunks > 0) && (vlan_mode != PORT_VLAN_MODE_ACCESS)) {
         /* 'trunks' column is not empty, and VLAN mode is one of
          * the TRUNK modes.  Construct bitmap of VLANs from 'trunks'
          * column.  This API will allocate the bitmap. */
         int index;
-        int64_t *vlan_trunks = xmalloc(sizeof(int64_t) * (row->n_vlan_trunks));
-        for (index = 0; index < row->n_vlan_trunks; index++) {
-            vlan_trunks[index] = ops_port_get_trunks(row, index);
+        int64_t *trunks = xmalloc(sizeof(int64_t) * (row->n_trunks));
+        for (index = 0; index < row->n_trunks; index++) {
+            trunks[index] = ops_port_get_trunks(row, index);
         }
-        vbmp = vlan_bitmap_from_array(vlan_trunks, row->n_vlan_trunks);
-        free(vlan_trunks);
+        vbmp = vlan_bitmap_from_array(trunks, row->n_trunks);
+        free(trunks);
 
     } else if (vlan_mode == PORT_VLAN_MODE_ACCESS) {
         /* Port is ACCESS mode.  Ignore 'trunks' column & allocate
@@ -885,6 +885,8 @@ vland_ovsdb_init(const char *db_path)
     ovsdb_idl_add_column(idl, &ovsrec_port_col_vlan_mode);
     ovsdb_idl_add_column(idl, &ovsrec_port_col_vlan_tag);
     ovsdb_idl_add_column(idl, &ovsrec_port_col_vlan_trunks);
+    ovsdb_idl_add_column(idl, &ovsrec_port_col_tag);
+    ovsdb_idl_add_column(idl, &ovsrec_port_col_trunks);
 
     ovsdb_idl_add_table(idl, &ovsrec_table_vlan);
     ovsdb_idl_add_column(idl, &ovsrec_vlan_col_internal_usage);
@@ -1122,15 +1124,15 @@ bool vland_default_vlan_member_port(void)
         if (port_row != NULL) {
             /* Checking for Each port*/
             OVSREC_PORT_FOR_EACH(port_row, idl) {
-                if (port_row->vlan_tag != NULL) {
+                if (port_row->tag != NULL) {
                     /* Checking if Default VLAN is a part of tag column */
                     if (ops_port_get_tag(port_row) == DEFAULT_VID) {
                         default_vlan_found = true;
                         break;
                     }
                 }
-                else if (port_row->n_vlan_trunks > 0) {
-                    for (index = 0; index < port_row->n_vlan_trunks; index++)
+                else if (port_row->n_trunks > 0) {
+                    for (index = 0; index < port_row->n_trunks; index++)
                     {
                         /* Checking if Default VLAN is a part of trunk column */
                         if (ops_port_get_trunks(port_row, index) == DEFAULT_VID) {

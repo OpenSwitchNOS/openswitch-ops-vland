@@ -469,28 +469,28 @@ DEFUN(vtysh_no_vlan,
         OVSREC_PORT_FOR_EACH(port_row, idl)
         {
             int64_t* trunks = NULL;
-            int trunk_count = port_row->n_vlan_trunks;
-            for (i = 0; i < port_row->n_vlan_trunks; i++)
+            int trunk_count = port_row->n_trunks;
+            for (i = 0; i < port_row->n_trunks; i++)
             {
                 if (vlan_id == ops_port_get_trunks(port_row, i))
                 {
                     vlan_found = 1;
-                    trunks = xmalloc(sizeof(int64_t) * (port_row->n_vlan_trunks - 1));
-                    for (i = n = 0; i < port_row->n_vlan_trunks; i++)
+                    trunks = xmalloc(sizeof(int64_t) * (port_row->n_trunks - 1));
+                    for (i = n = 0; i < port_row->n_trunks; i++)
                     {
                         if (vlan_id != ops_port_get_trunks(port_row, i))
                         {
                             trunks[n++] = ops_port_get_trunks(port_row, i);
                         }
                     }
-                    trunk_count = port_row->n_vlan_trunks - 1;
+                    trunk_count = port_row->n_trunks - 1;
                     ops_port_set_trunks(trunks, trunk_count, port_row, idl);
                     free(trunks);
                     break;
                 }
             }
             vlan_found = 0;
-            if (port_row->vlan_tag != NULL && ops_port_get_tag(port_row) == vlan_id) {
+            if (port_row->tag != NULL && ops_port_get_tag(port_row) == vlan_id) {
                 vlan_found = 1;
             }
 
@@ -1360,7 +1360,7 @@ DEFUN(cli_intf_vlan_trunk_allowed,
         }
 
         int64_t* trunks = NULL;
-        for (i = 0; i < vlan_port_row->n_vlan_trunks; i++)
+        for (i = 0; i < vlan_port_row->n_trunks; i++)
         {
             if (vlan_id == ops_port_get_trunks(vlan_port_row, i))
             {
@@ -1380,13 +1380,13 @@ DEFUN(cli_intf_vlan_trunk_allowed,
             }
         }
 
-        trunks = xmalloc(sizeof(int64_t) * (vlan_port_row->n_vlan_trunks + 1));
-        for (i = 0; i < vlan_port_row->n_vlan_trunks; i++)
+        trunks = xmalloc(sizeof(int64_t) * (vlan_port_row->n_trunks + 1));
+        for (i = 0; i < vlan_port_row->n_trunks; i++)
         {
             trunks[i] = ops_port_get_trunks(vlan_port_row, i);
         }
-        trunks[vlan_port_row->n_vlan_trunks] = vlan_id;
-        int trunk_count = vlan_port_row->n_vlan_trunks + 1;
+        trunks[vlan_port_row->n_trunks] = vlan_id;
+        int trunk_count = vlan_port_row->n_trunks + 1;
         ops_port_set_trunks(trunks, trunk_count, vlan_port_row, idl);
 
         list = list->link;
@@ -1498,22 +1498,22 @@ DEFUN(cli_intf_no_vlan_trunk_allowed,
         return CMD_SUCCESS;
     }
 
-    trunk_count = vlan_port_row->n_vlan_trunks;
-    for (i = 0; i < vlan_port_row->n_vlan_trunks; i++)
+    trunk_count = vlan_port_row->n_trunks;
+    for (i = 0; i < vlan_port_row->n_trunks; i++)
     {
         if (vlan_id == ops_port_get_trunks(vlan_port_row, i))
         {
             is_vlan_found = true;
-            trunks = xmalloc(sizeof(int64_t) * (vlan_port_row->n_vlan_trunks - 1));
+            trunks = xmalloc(sizeof(int64_t) * (vlan_port_row->n_trunks - 1));
 
-            for (i = n = 0; i < vlan_port_row->n_vlan_trunks; i++)
+            for (i = n = 0; i < vlan_port_row->n_trunks; i++)
             {
                 if (vlan_id != ops_port_get_trunks(vlan_port_row, i))
                 {
                     trunks[n++] = ops_port_get_trunks(vlan_port_row, i);
                 }
             }
-            trunk_count = vlan_port_row->n_vlan_trunks - 1;
+            trunk_count = vlan_port_row->n_trunks - 1;
             ops_port_set_trunks(trunks, trunk_count, vlan_port_row, idl);
             free(trunks);
             break;
@@ -1787,7 +1787,7 @@ DEFUN(cli_intf_no_vlan_trunk_native,
 
 
     int trunk_count = 0;
-    trunk_count = vlan_port_row->n_vlan_trunks;
+    trunk_count = vlan_port_row->n_trunks;
     ops_port_set_tag(DEFAULT_VLAN, vlan_port_row, idl);
     if (trunk_count)
     {
@@ -2243,7 +2243,7 @@ DEFUN(cli_lag_vlan_trunk_allowed,
     }
 
     int64_t* trunks = NULL;
-    for (i = 0; i < vlan_port_row->n_vlan_trunks; i++)
+    for (i = 0; i < vlan_port_row->n_trunks; i++)
     {
         if (vlan_id == ops_port_get_trunks(vlan_port_row, i))
         {
@@ -2262,13 +2262,13 @@ DEFUN(cli_lag_vlan_trunk_allowed,
         }
     }
 
-    trunks = xmalloc(sizeof(int64_t) * (vlan_port_row->n_vlan_trunks + 1));
-    for (i = 0; i < vlan_port_row->n_vlan_trunks; i++)
+    trunks = xmalloc(sizeof(int64_t) * (vlan_port_row->n_trunks + 1));
+    for (i = 0; i < vlan_port_row->n_trunks; i++)
     {
         trunks[i] = ops_port_get_trunks(vlan_port_row, i);
     }
-    trunks[vlan_port_row->n_vlan_trunks] = vlan_id;
-    int trunk_count = vlan_port_row->n_vlan_trunks + 1;
+    trunks[vlan_port_row->n_trunks] = vlan_id;
+    int trunk_count = vlan_port_row->n_trunks + 1;
     ops_port_set_trunks(trunks, trunk_count, vlan_port_row, idl);
 
     status = cli_do_config_finish(status_txn);
@@ -2345,20 +2345,20 @@ DEFUN(cli_lag_no_vlan_trunk_allowed,
     }
 
     int64_t* trunks = NULL;
-    int trunk_count = vlan_port_row->n_vlan_trunks;
-    for (i = 0; i < vlan_port_row->n_vlan_trunks; i++)
+    int trunk_count = vlan_port_row->n_trunks;
+    for (i = 0; i < vlan_port_row->n_trunks; i++)
     {
         if (vlan_id == ops_port_get_trunks(vlan_port_row, i))
         {
-            trunks = xmalloc(sizeof (int64_t) * (vlan_port_row->n_vlan_trunks - 1));
-            for (i = n = 0; i < vlan_port_row->n_vlan_trunks; i++)
+            trunks = xmalloc(sizeof (int64_t) * (vlan_port_row->n_trunks - 1));
+            for (i = n = 0; i < vlan_port_row->n_trunks; i++)
             {
                 if (vlan_id != ops_port_get_trunks(vlan_port_row, i))
                 {
                     trunks[n++] = ops_port_get_trunks(vlan_port_row, i);
                 }
             }
-            trunk_count = vlan_port_row->n_vlan_trunks - 1;
+            trunk_count = vlan_port_row->n_trunks - 1;
             ops_port_set_trunks(trunks, trunk_count, vlan_port_row, idl);
             break;
         }
@@ -2534,7 +2534,7 @@ DEFUN(cli_lag_no_vlan_trunk_native,
 
     int trunk_count = 0;
     ops_port_set_tag(DEFAULT_VLAN, vlan_port_row, idl);
-    trunk_count = vlan_port_row->n_vlan_trunks;
+    trunk_count = vlan_port_row->n_trunks;
     if (trunk_count)
     {
         ovsrec_port_set_vlan_mode(vlan_port_row, OVSREC_PORT_VLAN_MODE_TRUNK);
@@ -2754,7 +2754,7 @@ DEFUN(cli_show_vlan,
 
     OVSREC_PORT_FOR_EACH(port_row, idl)
     {
-        if(port_row->vlan_tag != NULL || port_row->n_vlan_trunks != 0)
+        if(port_row->tag != NULL || port_row->n_trunks != 0)
             port_count++;
     }
 
@@ -2785,11 +2785,11 @@ DEFUN(cli_show_vlan,
             OVSREC_PORT_FOR_EACH(port_row, idl)
             {
                 print_tag = 0;
-                for (i = 0; i < port_row->n_vlan_trunks; i++)
+                for (i = 0; i < port_row->n_trunks; i++)
                 {
                     if (vlan_row->id == ops_port_get_trunks(port_row, i))
                     {
-                        if (port_row->vlan_tag != NULL && ops_port_get_tag(port_row) == vlan_row->id)
+                        if (port_row->tag != NULL && ops_port_get_tag(port_row) == vlan_row->id)
                         {
                             print_tag = 1;
                         }
@@ -2797,7 +2797,7 @@ DEFUN(cli_show_vlan,
                         break;
                     }
                 }
-                if (print_tag == 0 && port_row->vlan_tag != NULL && ops_port_get_tag(port_row) == vlan_row->id)
+                if (print_tag == 0 && port_row->tag != NULL && ops_port_get_tag(port_row) == vlan_row->id)
                 {
                     port_nodes[n++] = (struct ovsrec_port *)port_row;
                 }
@@ -2895,11 +2895,11 @@ DEFUN(cli_show_vlan_id,
     {
         OVSREC_PORT_FOR_EACH(port_row, idl)
         {
-            for (i = 0; i < port_row->n_vlan_trunks; i++)
+            for (i = 0; i < port_row->n_trunks; i++)
             {
                 if (vlan_row->id == ops_port_get_trunks(port_row, i))
                 {
-                    if (port_row->vlan_tag != NULL && ops_port_get_tag(port_row) == vlan_row->id)
+                    if (port_row->tag != NULL && ops_port_get_tag(port_row) == vlan_row->id)
                     {
                         print_tag = 1;
                     }
@@ -2914,7 +2914,7 @@ DEFUN(cli_show_vlan_id,
                     }
                 }
             }
-            if (print_tag == 0 && port_row->vlan_tag != NULL && ops_port_get_tag(port_row) == vlan_row->id)
+            if (print_tag == 0 && port_row->tag != NULL && ops_port_get_tag(port_row) == vlan_row->id)
             {
                 if (count == 0)
                 {
