@@ -2832,6 +2832,144 @@ DEFUN(cli_show_vlan,
     return CMD_SUCCESS;
 }
 
+DEFUN(cli_show_vlan_trunk,
+    cli_show_vlan_trunk_cmd,
+    "show vlan trunk",
+    SHOW_STR
+    SHOW_VLAN_STR
+    TRUNK_STR)
+{
+    const struct ovsrec_vlan *vlan_row = NULL;
+    const struct ovsrec_port *port_row = NULL;
+    struct shash sorted_vlan_id;
+    struct shash sorted_interfaces;
+    const struct shash_node **nodes;
+    const struct shash_node **ports;
+    int idx, count, i;
+    int port_count = 0;
+    char *str;
+    str = xmalloc(sizeof(long int));
+    const char *l3_port = NULL;
+
+    vlan_row = ovsrec_vlan_first(idl);
+    if (vlan_row == NULL)
+    {
+        vty_out(vty, "No vlan is configured%s", VTY_NEWLINE);
+        free(str);
+        return CMD_SUCCESS;
+    }
+
+    vty_out(vty, "%s", VTY_NEWLINE);
+    vty_out(vty, "--------------------------------------------------------------------------------------%s", VTY_NEWLINE);
+    vty_out(vty, "VLAN    Name            Status   Reason         Mode           Interfaces%s", VTY_NEWLINE);
+    vty_out(vty, "--------------------------------------------------------------------------------------%s", VTY_NEWLINE);
+
+    shash_init(&sorted_vlan_id);
+
+    OVSREC_VLAN_FOR_EACH(vlan_row, idl)
+    {
+        sprintf(str, "%ld", vlan_row->id);
+        shash_add(&sorted_vlan_id, str, (void *)vlan_row);
+    }
+
+    OVSREC_PORT_FOR_EACH(port_row, idl)
+    {
+        if(port_row->vlan_tag != NULL || port_row->n_vlan_trunks != 0)
+            port_count++;
+    }
+
+    nodes = sort_vlan_id(&sorted_vlan_id);
+    count = shash_count(&sorted_vlan_id);
+    for (idx = 0; idx < count; idx++)
+    {
+        shash_init(&sorted_interfaces);
+        vlan_row = (const struct ovsrec_vlan *)nodes[idx]->data;
+        struct ovsrec_port **port_nodes = NULL;
+        int n = 0;
+        char vlan_id[5] = { 0 };
+        snprintf(vlan_id, 5, "%ld", vlan_row->id);
+        vty_out(vty, "%-8s", vlan_id);
+        vty_out(vty, "%-16s", vlan_row->name);
+        vty_out(vty, "%-9s", vlan_row->oper_state);
+        vty_out(vty, "%-15s", vlan_row->oper_state_reason);
+        if(strcmp(vlan_row->oper_state_reason, "ok") == 0)
+        {
+            vty_out(vty, "trunk");
+        }
+        else
+        {
+            vty_out(vty, "%s", VTY_NEWLINE);
+            continue;
+        }
+
+        if(!smap_is_empty(&vlan_row->internal_usage))
+            vty_out(vty, "%-15s", "l3port");
+        else
+            vty_out(vty, "%-15s", "");
+        int count = 0, print_tag = 0;
+        port_row = ovsrec_port_first(idl);
+
+        port_nodes = xmalloc(port_count * sizeof (struct ovsrec_port));
+        if (port_row != NULL)
+        {
+            OVSREC_PORT_FOR_EACH(port_row, idl)
+            {
+                print_tag = 0;
+                for (i = 0; i < port_row->n_vlan_trunks; i++)
+                {
+                    if (vlan_row->id == ops_port_get_trunks(port_row, i))
+                    {
+                        if (port_row->vlan_tag != NULL && ops_port_get_tag(port_row) == vlan_row->id)
+                        {
+                            print_tag = 1;
+                        }
+                        port_nodes[n++] = (struct ovsrec_port *)port_row;
+                        break;
+                    }
+                }
+                if (print_tag == 1 && port_row->vlan_tag != NULL && ops_port_get_tag(port_row) == vlan_row->id)
+                {
+                    port_nodes[n++] = (struct ovsrec_port *)port_row;
+                }
+            }
+        }
+
+        if ((l3_port = smap_get(&vlan_row->internal_usage, VLAN_INTERNAL_USAGE_L3PORT)) != NULL)
+        {
+            vty_out(vty, "%s", l3_port);
+        }
+
+        if(n > 0)
+        {
+            for(i = 0; i < n; i++)
+             {
+                 shash_add(&sorted_interfaces,
+                          (const char *)port_nodes[i]->name, (void *)port_row);
+             }
+             ports = sort_interface(&sorted_interfaces);
+             count = shash_count(&sorted_interfaces);
+
+             for(int id = 0; id < count; id++)
+             {
+                 if(id != count-1)
+                     vty_out(vty, "%s, ", ports[id]->name);
+                 else
+                     vty_out(vty, "%s", ports[id]->name);
+             }
+             free(ports);
+        }
+        shash_destroy(&sorted_interfaces);
+        free(port_nodes);
+        vty_out(vty, "%s", VTY_NEWLINE);
+    }
+    shash_destroy(&sorted_vlan_id);
+    free(nodes);
+   free((char *)l3_port);
+    free(str);
+
+    return CMD_SUCCESS;
+}
+
 DEFUN(cli_show_vlan_id,
     cli_show_vlan_id_cmd,
     "show vlan <1-4094>",
@@ -3005,6 +3143,7 @@ void cli_post_init(void)
     install_element(ENABLE_NODE, &cli_show_vlan_int_range_cmd);
     install_element(ENABLE_NODE, &cli_show_vlan_summary_cmd);
     install_element(ENABLE_NODE, &cli_show_vlan_cmd);
+    install_element(ENABLE_NODE, &cli_show_vlan_trunk_cmd);
     install_element(ENABLE_NODE, &cli_show_vlan_id_cmd);
 
     install_element(VLAN_NODE, &config_exit_cmd);
