@@ -180,12 +180,13 @@ DEFUN (vtysh_interface_vlan,
 {
    vty->node = VLAN_INTERFACE_NODE;
    static char vlan_if[MAX_IFNAME_LENGTH];
+   char vlan_if_temp[MAX_IFNAME_LENGTH];
    const struct ovsrec_vlan *vlan_row = NULL;
    int vlan_id = atoi(argv[0]);
 
-   VLANIF_NAME(vlan_if, argv[0]);
+   VLANIF_NAME(vlan_if_temp, argv[0]);
 
-   if (!verify_ifname(vlan_if)) {
+   if (!verify_ifname(vlan_if_temp)) {
        vty->node = CONFIG_NODE;
        return CMD_ERR_NOTHING_TODO;
    }
@@ -194,13 +195,13 @@ DEFUN (vtysh_interface_vlan,
    {
        if (vlan_row->id == vlan_id)
        {
-           if (create_vlan_interface(vlan_if) == CMD_OVSDB_FAILURE) {
+           if (create_vlan_interface(vlan_if_temp) == CMD_OVSDB_FAILURE) {
                vty->node = CONFIG_NODE;
                return CMD_ERR_NOTHING_TODO;
            }
 
-           VLOG_DBG("%s Created vlan interface = %s\n", __func__, vlan_if);
-
+           VLOG_DBG("%s Created vlan interface = %s\n", __func__, vlan_if_temp);
+           strncpy(vlan_if, vlan_if_temp, MAX_IFNAME_LENGTH);
            vty->index = vlan_if;
            return CMD_SUCCESS;
        }
@@ -222,18 +223,20 @@ DEFUN (no_vtysh_interface_vlan,
 {
    vty->node = CONFIG_NODE;
    static char vlan_if[MAX_IFNAME_LENGTH];
+   char vlan_if_temp[MAX_IFNAME_LENGTH];
 
-   VLANIF_NAME(vlan_if, argv[0]);
+   VLANIF_NAME(vlan_if_temp, argv[0]);
 
-   if ((verify_ifname(vlan_if) == 0)) {
+   if ((verify_ifname(vlan_if_temp) == 0)) {
        return CMD_OVSDB_FAILURE;
    }
 
-   VLOG_DBG("%s: vlan interface = %s\n", __func__, vlan_if);
+   VLOG_DBG("%s: vlan interface = %s\n", __func__, vlan_if_temp);
 
-   if (delete_vlan_interface(vlan_if) == CMD_OVSDB_FAILURE) {
+   if (delete_vlan_interface(vlan_if_temp) == CMD_OVSDB_FAILURE) {
        return CMD_OVSDB_FAILURE;
    }
+   strncpy(vlan_if, vlan_if_temp, MAX_IFNAME_LENGTH);
    vty->index = vlan_if;
 
    return CMD_SUCCESS;
@@ -489,6 +492,7 @@ DEFUN(vtysh_no_vlan,
                     break;
                 }
             }
+            vlan_found = 0;
             if (port_row->vlan_tag != NULL && ops_port_get_tag(port_row) == vlan_id) {
                 vlan_found = 1;
             }
@@ -1345,7 +1349,14 @@ DEFUN(cli_intf_vlan_trunk_allowed,
             return CMD_SUCCESS;
         }
 
-        if (strcmp(vlan_port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_NATIVE_TAGGED) != 0 &&
+        if (strcmp(vlan_port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_ACCESS) == 0)
+        {
+            if (ops_port_get_tag(vlan_port_row) != DEFAULT_VLAN) {
+                ops_port_set_tag(DEFAULT_VLAN, vlan_port_row, idl);
+            }
+            ovsrec_port_set_vlan_mode(vlan_port_row, OVSREC_PORT_VLAN_MODE_NATIVE_UNTAGGED);
+        }
+        else if (strcmp(vlan_port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_NATIVE_TAGGED) != 0 &&
                  strcmp(vlan_port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_NATIVE_UNTAGGED) != 0)
         {
             ovsrec_port_set_vlan_mode(vlan_port_row, OVSREC_PORT_VLAN_MODE_NATIVE_UNTAGGED);
@@ -2219,6 +2230,14 @@ DEFUN(cli_lag_vlan_trunk_allowed,
     if (vlan_port_row->vlan_mode == NULL)
     {
         ovsrec_port_set_vlan_mode(vlan_port_row, OVSREC_PORT_VLAN_MODE_TRUNK);
+    }
+    else if (strcmp(vlan_port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_ACCESS) == 0)
+    {
+        if (ops_port_get_tag(vlan_port_row) != DEFAULT_VLAN)
+        {
+            ops_port_set_tag(DEFAULT_VLAN, vlan_port_row, idl);
+        }
+        ovsrec_port_set_vlan_mode(vlan_port_row, OVSREC_PORT_VLAN_MODE_NATIVE_UNTAGGED);
     }
     else if (strcmp(vlan_port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_NATIVE_TAGGED) != 0 &&
         strcmp(vlan_port_row->vlan_mode, OVSREC_PORT_VLAN_MODE_NATIVE_UNTAGGED) != 0)
